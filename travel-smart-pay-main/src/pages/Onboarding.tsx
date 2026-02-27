@@ -16,7 +16,7 @@ const purposes = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -146,10 +146,11 @@ export default function Onboarding() {
       // Clear saved data
       localStorage.removeItem('onboarding_data');
 
-      // Force reload to update user context
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 500);
+      // Refresh user data to get updated hasCompletedOnboarding
+      await refreshUser();
+      
+      // Navigate to dashboard
+      navigate("/dashboard", { replace: true });
     } catch (error: any) {
       console.error('Onboarding error details:', {
         error,

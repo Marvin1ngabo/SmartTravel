@@ -7,6 +7,12 @@ interface User {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  destination?: string;
+  travelDate?: string;
+  purpose?: string;
+  selectedPlanId?: string;
+  paymentPlan?: string;
+  hasCompletedOnboarding?: boolean;
 }
 
 interface AuthContextType {
@@ -22,6 +28,7 @@ interface AuthContextType {
     phone?: string;
   }) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,8 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('auth_token');
   };
 
+  const refreshUser = async () => {
+    if (token) {
+      await loadUser();
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
