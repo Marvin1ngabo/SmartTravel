@@ -34,47 +34,27 @@ export default function Onboarding() {
     // Redirect to dashboard if already completed onboarding
     if (user?.hasCompletedOnboarding) {
       navigate("/dashboard", { replace: true });
-      return;
-    }
-
-    // Check for saved onboarding data and auto-complete if user just registered
-    const savedData = localStorage.getItem('onboarding_data');
-    if (savedData && user) {
-      const parsedData = JSON.parse(savedData);
-      setData(parsedData);
-      
-      // Auto-complete onboarding
-      const completeOnboarding = async () => {
-        try {
-          await api.updateOnboarding({
-            destination: parsedData.country,
-            travelDate: new Date(parsedData.travelDate).toISOString(),
-            purpose: parsedData.purpose,
-            selectedPlanId: parsedData.providerId,
-            paymentPlan: parsedData.paymentPlan,
-          });
-          
-          localStorage.removeItem('onboarding_data');
-          toast({
-            title: "Setup complete!",
-            description: "Welcome to your dashboard.",
-          });
-          
-          setTimeout(() => {
-            window.location.href = "/dashboard";
-          }, 500);
-        } catch (error) {
-          console.error('Auto-complete onboarding error:', error);
-          localStorage.removeItem('onboarding_data');
-        }
-      };
-      
-      completeOnboarding();
     }
   }, [user, navigate]);
 
   useEffect(() => {
     loadInsurancePlans();
+    
+    // Check for saved onboarding data
+    const savedData = localStorage.getItem('onboarding_data');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setData(parsedData);
+        toast({
+          title: "Welcome back!",
+          description: "Your selections have been restored.",
+        });
+      } catch (error) {
+        console.error('Error parsing saved data:', error);
+        localStorage.removeItem('onboarding_data');
+      }
+    }
   }, []);
 
   const loadInsurancePlans = async () => {

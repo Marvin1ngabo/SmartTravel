@@ -52,22 +52,13 @@ export default function Auth() {
           phone: form.phone,
         });
         
-        // Check if there's saved onboarding data
-        const savedData = localStorage.getItem('onboarding_data');
-        if (savedData) {
-          toast({
-            title: "Account created!",
-            description: "Completing your setup...",
-          });
-          // Will complete onboarding automatically
-          navigate("/onboarding");
-        } else {
-          toast({
-            title: "Account created!",
-            description: "Let's set up your travel insurance.",
-          });
-          navigate("/onboarding");
-        }
+        toast({
+          title: "Account created!",
+          description: "Let's complete your setup.",
+        });
+        
+        // Always go to onboarding after registration
+        navigate("/onboarding");
       }
     } catch (error: any) {
       toast({
