@@ -1,0 +1,106 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+class ApiClient {
+  private baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  private getHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return headers;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options?: RequestInit
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options?.headers,
+      },
+    };
+
+    const response = await fetch(url, config);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Something went wrong');
+    }
+
+    return data;
+  }
+
+  // Auth endpoints
+  async register(data: {
+    email: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+  }) {
+    return this.request<{ user: any; token: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async login(data: { email: string; password: string }) {
+    return this.request<{ user: any; token: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProfile() {
+    return this.request<any>('/auth/profile');
+  }
+
+  // Insurance endpoints
+  async getInsurancePlans() {
+    return this.request<any[]>('/insurance/options');
+  }
+
+  async createPolicy(data: {
+    userId: string;
+    planId: string;
+    paymentId: string;
+    startDate: string;
+    endDate: string;
+  }) {
+    return this.request<any>('/insurance/policy', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Payment endpoints
+  async createPayment(data: {
+    amount: number;
+    currency: string;
+    userId: string;
+  }) {
+    return this.request<any>('/payments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPaymentStatus(paymentId: string) {
+    return this.request<any>(`/payments/${paymentId}`);
+  }
+}
+
+export const api = new ApiClient(API_BASE_URL);

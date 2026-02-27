@@ -1,20 +1,56 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { login, register } = useAuth();
+  const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
-    destination: "",
-    travelDate: "",
+    phone: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/dashboard");
+    setIsLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(form.email, form.password);
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully signed in.",
+        });
+      } else {
+        await register({
+          email: form.email,
+          password: form.password,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+        });
+        toast({
+          title: "Account created!",
+          description: "Welcome to VoyageShield.",
+        });
+      }
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const countries = ["Canada", "United States", "United Kingdom", "France", "Germany", "Nigeria", "South Africa", "Kenya", "Japan", "Australia"];
@@ -68,17 +104,30 @@ export default function Auth() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                  className="input-field"
-                  placeholder="Alice Uwase"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.firstName}
+                    onChange={e => setForm({ ...form, firstName: e.target.value })}
+                    className="input-field"
+                    placeholder="Alice"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.lastName}
+                    onChange={e => setForm({ ...form, lastName: e.target.value })}
+                    className="input-field"
+                    placeholder="Uwase"
+                  />
+                </div>
+              </>
             )}
 
             <div>
@@ -98,6 +147,7 @@ export default function Auth() {
               <input
                 type="password"
                 required
+                minLength={6}
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 className="input-field"
@@ -106,37 +156,20 @@ export default function Auth() {
             </div>
 
             {!isLogin && (
-              <>
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Destination Country</label>
-                  <select
-                    required
-                    value={form.destination}
-                    onChange={e => setForm({ ...form, destination: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="">Select destination</option>
-                    {countries.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1 block">Planned Travel Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={form.travelDate}
-                    onChange={e => setForm({ ...form, travelDate: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-              </>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  className="input-field"
+                  placeholder="+250 123 456 789"
+                />
+              </div>
             )}
 
-            <button type="submit" className="btn-maroon w-full mt-2">
-              {isLogin ? "Sign In" : "Create Account"}
+            <button type="submit" className="btn-maroon w-full mt-2" disabled={isLoading}>
+              {isLoading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
             </button>
           </form>
 
