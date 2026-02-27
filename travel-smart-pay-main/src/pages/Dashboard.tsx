@@ -33,6 +33,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
   const { toast } = useToast();
+  
+  console.log('Dashboard - authUser:', authUser);
+  console.log('Dashboard - authUser.role:', authUser?.role);
+  console.log('Dashboard - is admin?', authUser?.role === 'admin');
+  
   const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [user, setUser] = useState(mockUser);
@@ -104,7 +109,9 @@ export default function Dashboard() {
           <h1 className="font-serif text-xl sm:text-2xl font-bold text-primary cursor-pointer" onClick={() => navigate("/")}>VoyageShield</h1>
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/compare")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">Compare</button>
-            <button onClick={() => navigate("/admin")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admin</button>
+            {authUser?.role === 'admin' && (
+              <button onClick={() => navigate("/admin")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admin</button>
+            )}
             <div className="relative">
               <button 
                 onClick={() => setShowUserMenu(!showUserMenu)}

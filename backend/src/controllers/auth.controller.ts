@@ -48,6 +48,7 @@ export const register = async (req: Request, res: Response) => {
         firstName: true,
         lastName: true,
         phone: true,
+        role: true,
         destination: true,
         travelDate: true,
         purpose: true,
@@ -99,13 +100,14 @@ export const login = async (req: Request, res: Response) => {
       expiresIn: '7d',
     });
 
-    res.json({
+    const response = {
       user: {
         id: user.id,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
+        role: user.role,
         destination: user.destination,
         travelDate: user.travelDate,
         purpose: user.purpose,
@@ -114,7 +116,10 @@ export const login = async (req: Request, res: Response) => {
         hasCompletedOnboarding: user.hasCompletedOnboarding,
       },
       token,
-    });
+    };
+
+    console.log('Login response:', JSON.stringify(response.user, null, 2));
+    res.json(response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Invalid request data', details: error.errors });
@@ -137,6 +142,7 @@ export const getProfile = async (req: Request, res: Response) => {
         firstName: true,
         lastName: true,
         phone: true,
+        role: true,
         destination: true,
         travelDate: true,
         purpose: true,

@@ -7,6 +7,7 @@ interface User {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  role?: string;
   destination?: string;
   travelDate?: string;
   purpose?: string;
@@ -65,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await api.login({ email, password });
+    console.log('Login response received:', response);
+    console.log('User role:', response.user.role);
     setUser(response.user);
     setToken(response.token);
     localStorage.setItem('auth_token', response.token);
