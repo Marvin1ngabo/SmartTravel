@@ -113,8 +113,26 @@ export default function Onboarding() {
       return;
     }
 
+    // Validate data before sending
+    if (!data.travelDate || !data.purpose || !data.providerId) {
+      toast({
+        title: "Missing information",
+        description: "Please complete all steps",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
+      console.log('Sending onboarding data:', {
+        destination: data.country,
+        travelDate: new Date(data.travelDate).toISOString(),
+        purpose: data.purpose,
+        selectedPlanId: data.providerId,
+        paymentPlan: data.paymentPlan,
+      });
+
       await api.updateOnboarding({
         destination: data.country,
         travelDate: new Date(data.travelDate).toISOString(),
@@ -136,7 +154,7 @@ export default function Onboarding() {
       console.error('Onboarding error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save onboarding data",
+        description: error.message || "Failed to save onboarding data. Please try again.",
         variant: "destructive",
       });
     } finally {

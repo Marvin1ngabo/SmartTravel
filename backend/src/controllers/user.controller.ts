@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 
 const updateOnboardingSchema = z.object({
-  destination: z.string(),
-  travelDate: z.string().datetime(),
-  purpose: z.string(),
+  destination: z.string().min(1),
+  travelDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+    message: "Invalid date format",
+  }),
+  purpose: z.string().min(1),
   selectedPlanId: z.string().uuid(),
   paymentPlan: z.enum(['gradual', 'full']),
 });
@@ -13,6 +15,8 @@ const updateOnboardingSchema = z.object({
 export const updateOnboarding = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
+    console.log('Onboarding request body:', req.body);
+    
     const data = updateOnboardingSchema.parse(req.body);
 
     const user = await prisma.user.update({
@@ -43,6 +47,7 @@ export const updateOnboarding = async (req: Request, res: Response) => {
     res.json(user);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       res.status(400).json({ error: 'Invalid request data', details: error.errors });
     } else {
       console.error('Update onboarding error:', error);
