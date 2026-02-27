@@ -34,10 +34,36 @@ Server runs on http://localhost:3001
 
 ## TODO
 
-- [ ] Add database (PostgreSQL + Prisma)
+- [x] Add database (PostgreSQL + Prisma)
 - [ ] Implement authentication (JWT)
 - [ ] Integrate Stripe for payments
 - [ ] Add request validation middleware
 - [ ] Add rate limiting
 - [ ] Add logging (Winston/Pino)
 - [ ] Add tests
+
+
+## Database Setup
+
+After installing dependencies, run:
+
+```bash
+# Generate Prisma Client
+npm run db:generate
+
+# Push schema to database
+npm run db:push
+
+# Seed database with sample data
+npm run db:seed
+
+# Open Prisma Studio (database GUI)
+npm run db:studio
+```
+
+## Database Schema
+
+- **User** - User accounts
+- **Payment** - Payment transactions
+- **InsurancePlan** - Available insurance plans
+- **InsurancePolicy** - Active user policies
