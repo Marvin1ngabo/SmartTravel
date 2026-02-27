@@ -68,7 +68,20 @@ class ApiClient {
     return this.request<any>('/auth/profile');
   }
 
-  // Insurance endpoints
+  // User endpoints
+  async updateOnboarding(data: {
+    destination: string;
+    travelDate: string;
+    purpose: string;
+    selectedPlanId: string;
+    paymentPlan: string;
+  }) {
+    const response = await this.request<any>('/user/onboarding', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response;
+  }
   async getInsurancePlans() {
     return this.request<any[]>('/insurance/options');
   }

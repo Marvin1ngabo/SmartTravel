@@ -86,13 +86,17 @@ export default function Onboarding() {
   const handleFinish = async () => {
     if (!user) {
       // Not logged in, go to auth
+      toast({
+        title: "Please sign in first",
+        description: "Create an account to continue",
+      });
       navigate("/auth");
       return;
     }
 
     setIsLoading(true);
     try {
-      await api.updateOnboarding({
+      const updatedUser = await api.updateOnboarding({
         destination: data.country,
         travelDate: new Date(data.travelDate).toISOString(),
         purpose: data.purpose,
@@ -105,9 +109,12 @@ export default function Onboarding() {
         description: "Your travel insurance is ready to go.",
       });
 
-      // Reload user data
-      window.location.href = "/dashboard";
+      // Force reload to update user context
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error: any) {
+      console.error('Onboarding error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save onboarding data",
@@ -130,9 +137,11 @@ export default function Onboarding() {
         <h1 className="font-serif text-2xl font-bold text-primary cursor-pointer" onClick={() => navigate("/")}>
           VoyageShield
         </h1>
-        <button onClick={() => navigate("/auth")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Skip to Sign In
-        </button>
+        {!user && (
+          <button onClick={() => navigate("/auth")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Skip to Sign In
+          </button>
+        )}
       </nav>
 
       {/* Progress Indicator */}
