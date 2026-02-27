@@ -156,11 +156,17 @@ export default function Onboarding() {
         <h1 className="font-serif text-2xl font-bold text-primary cursor-pointer" onClick={() => navigate("/")}>
           VoyageShield
         </h1>
-        {!user && (
-          <button onClick={() => navigate("/auth")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Skip to Sign In
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {user ? (
+            <span className="text-sm text-muted-foreground">
+              Logged in as {user.firstName || user.email}
+            </span>
+          ) : (
+            <button onClick={() => navigate("/auth")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Skip to Sign In
+            </button>
+          )}
+        </div>
       </nav>
 
       {/* Progress Indicator */}
