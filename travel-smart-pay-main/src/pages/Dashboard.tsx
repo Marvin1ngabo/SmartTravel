@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import ProgressRing from "@/components/ProgressRing";
 import PaymentTimeline from "@/components/PaymentTimeline";
 
@@ -20,13 +23,6 @@ const mockUser = {
   ],
 };
 
-const providers = [
-  { name: "GlobalSafe Insurance", coverage: "Full medical + trip cancellation", price: "$250" },
-  { name: "AfroShield Travel Cover", coverage: "Medical + baggage protection", price: "$200" },
-  { name: "SecureJourney International", coverage: "Comprehensive all-risk coverage", price: "$300" },
-  { name: "TrustGuard Africa", coverage: "Basic medical + emergency evacuation", price: "$180" },
-];
-
 const riskLevels: Record<string, { level: string; color: string; minInsurance: string; compliance: string }> = {
   Canada: { level: "Low", color: "bg-green-100 text-green-800", minInsurance: "$250", compliance: "Compliant" },
   Nigeria: { level: "Medium", color: "bg-yellow-100 text-yellow-800", minInsurance: "$200", compliance: "Compliant" },
@@ -35,11 +31,44 @@ const riskLevels: Record<string, { level: string; color: string; minInsurance: s
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user: authUser, logout } = useAuth();
+  const { toast } = useToast();
+  const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [user, setUser] = useState(mockUser);
   const [selectedProvider, setSelectedProvider] = useState(mockUser.provider);
   const [contributionAmount, setContributionAmount] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    loadInsurancePlans();
+  }, []);
+
+  const loadInsurancePlans = async () => {
+    try {
+      const plans = await api.getInsurancePlans();
+      setInsurancePlans(plans);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load insurance plans",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged out",
+      description: "You've been successfully logged out.",
+    });
+    navigate("/");
+  };
 
   const balance = user.requiredAmount - user.paidAmount;
   const progress = Math.round((user.paidAmount / user.requiredAmount) * 100);
@@ -76,8 +105,33 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/compare")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">Compare</button>
             <button onClick={() => navigate("/admin")} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admin</button>
-            <div className="w-9 h-9 rounded-full gradient-maroon flex items-center justify-center text-primary-foreground font-semibold text-sm">
-              {user.name.charAt(0)}
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-9 h-9 rounded-full gradient-maroon flex items-center justify-center text-primary-foreground font-semibold text-sm"
+              >
+                {authUser?.firstName?.charAt(0) || authUser?.email?.charAt(0) || 'U'}
+              </button>
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 glass-card-elevated rounded-lg shadow-lg py-2 z-50">
+                  <div className="px-4 py-2 border-b border-border/50">
+                    <p className="text-sm font-semibold text-foreground">{authUser?.firstName} {authUser?.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{authUser?.email}</p>
+                  </div>
+                  <button 
+                    onClick={() => navigate("/dashboard")}
+                    className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-accent/50 transition-colors"
+                  >
+                    Dashboard
+                  </button>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-accent/50 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -86,7 +140,7 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         {/* Welcome */}
         <div className="animate-fade-in">
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Welcome back, {user.name.split(" ")[0]} 👋</h2>
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Welcome back, {authUser?.firstName || 'User'} 👋</h2>
           <p className="text-muted-foreground mt-1">
             {progress < 100 ? `You're ${progress}% done securing your trip.` : "Your travel insurance is fully secured!"}
           </p>
@@ -243,22 +297,34 @@ export default function Dashboard() {
               Compare All →
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {providers.map(p => (
-              <div
-                key={p.name}
-                onClick={() => setSelectedProvider(p.name)}
-                className={`provider-card ${selectedProvider === p.name ? "selected" : ""}`}
-              >
-                <div className="w-10 h-10 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-sm mb-3">
-                  {p.name.charAt(0)}
+          {isLoadingPlans ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-sm text-muted-foreground mt-2">Loading insurance plans...</p>
+            </div>
+          ) : insurancePlans.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {insurancePlans.map(plan => (
+                <div
+                  key={plan.id}
+                  onClick={() => setSelectedProvider(plan.name)}
+                  className={`provider-card ${selectedProvider === plan.name ? "selected" : ""}`}
+                >
+                  <div className="w-10 h-10 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-sm mb-3">
+                    {plan.name.charAt(0)}
+                  </div>
+                  <h4 className="font-semibold text-foreground text-sm">{plan.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
+                  <p className="font-bold text-primary text-sm mt-3">${plan.price}</p>
+                  <p className="text-xs text-muted-foreground">{plan.duration} days coverage</p>
                 </div>
-                <h4 className="font-semibold text-foreground text-sm">{p.name}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{p.coverage}</p>
-                <p className="font-bold text-primary text-sm mt-3">{p.price}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card-elevated p-8 text-center">
+              <p className="text-muted-foreground">No insurance plans available</p>
+            </div>
+          )}
         </div>
 
         {/* Contribution History */}
