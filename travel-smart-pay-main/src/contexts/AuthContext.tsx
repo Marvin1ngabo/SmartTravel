@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUser = async () => {
     try {
       const userData = await api.getProfile();
+      console.log('Loaded user data:', userData);
       setUser(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
