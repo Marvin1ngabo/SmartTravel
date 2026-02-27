@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const steps = ["Destination", "Purpose", "Insurance Info", "Provider", "Payment Plan"];
 
@@ -26,29 +29,52 @@ const purposes = [
   { id: "business", label: "Business", icon: "📊", desc: "Meetings, conferences, deals" },
 ];
 
-const providers = [
-  { name: "GlobalSafe Insurance", coverage: "Full medical + trip cancellation", price: 250, rating: 4.8 },
-  { name: "AfroShield Travel Cover", coverage: "Medical + baggage protection", price: 200, rating: 4.5 },
-  { name: "SecureJourney International", coverage: "Comprehensive all-risk coverage", price: 300, rating: 4.9 },
-  { name: "TrustGuard Africa", coverage: "Basic medical + emergency evacuation", price: 180, rating: 4.3 },
-];
-
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
   const [data, setData] = useState({
     country: "",
     purpose: "",
     provider: "",
+    providerId: "",
     paymentPlan: "",
+    travelDate: "",
   });
 
+  useEffect(() => {
+    // Redirect to dashboard if already completed onboarding
+    if (user?.hasCompletedOnboarding) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    loadInsurancePlans();
+  }, []);
+
+  const loadInsurancePlans = async () => {
+    try {
+      const plans = await api.getInsurancePlans();
+      setInsurancePlans(plans);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load insurance plans",
+        variant: "destructive",
+      });
+    }
+  };
+
   const selectedCountry = countries.find(c => c.name === data.country);
-  const selectedProvider = providers.find(p => p.name === data.provider);
+  const selectedProvider = insurancePlans.find(p => p.id === data.providerId);
 
   const canProceed = () => {
     switch (step) {
-      case 0: return !!data.country;
+      case 0: return !!data.country && !!data.travelDate;
       case 1: return !!data.purpose;
       case 2: return true;
       case 3: return !!data.provider;
@@ -57,8 +83,39 @@ export default function Onboarding() {
     }
   };
 
-  const handleFinish = () => {
-    navigate("/auth", { state: { onboarding: data } });
+  const handleFinish = async () => {
+    if (!user) {
+      // Not logged in, go to auth
+      navigate("/auth");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.updateOnboarding({
+        destination: data.country,
+        travelDate: new Date(data.travelDate).toISOString(),
+        purpose: data.purpose,
+        selectedPlanId: data.providerId,
+        paymentPlan: data.paymentPlan,
+      });
+
+      toast({
+        title: "Setup complete!",
+        description: "Your travel insurance is ready to go.",
+      });
+
+      // Reload user data
+      window.location.href = "/dashboard";
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save onboarding data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const riskColor = (risk: string) =>
@@ -115,7 +172,17 @@ export default function Onboarding() {
             {step === 0 && (
               <div>
                 <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Where are you traveling?</h2>
-                <p className="text-muted-foreground mb-6">Select your destination country</p>
+                <p className="text-muted-foreground mb-6">Select your destination country and travel date</p>
+                <div className="mb-6">
+                  <label className="text-sm font-medium text-foreground mb-2 block">Travel Date</label>
+                  <input
+                    type="date"
+                    value={data.travelDate}
+                    onChange={e => setData({ ...data, travelDate: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="input-field max-w-md"
+                  />
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {countries.map(c => (
                     <button
@@ -207,25 +274,31 @@ export default function Onboarding() {
                 <button onClick={() => navigate("/compare")} className="text-sm text-primary font-semibold hover:underline mb-6 inline-block">
                   📊 Compare providers side by side →
                 </button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {providers.map(p => (
-                    <button
-                      key={p.name}
-                      onClick={() => setData({ ...data, provider: p.name })}
-                      className={`provider-card text-left ${data.provider === p.name ? "selected" : ""}`}
-                    >
-                      <div className="w-10 h-10 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-sm mb-3">
-                        {p.name.charAt(0)}
-                      </div>
-                      <h4 className="font-semibold text-foreground">{p.name}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">{p.coverage}</p>
-                      <div className="flex justify-between items-center mt-3">
-                        <span className="text-xs text-muted-foreground">⭐ {p.rating}</span>
-                        <span className="font-bold text-primary">${p.price}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                {insurancePlans.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Loading insurance plans...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {insurancePlans.map(plan => (
+                      <button
+                        key={plan.id}
+                        onClick={() => setData({ ...data, provider: plan.name, providerId: plan.id })}
+                        className={`provider-card text-left ${data.provider === plan.name ? "selected" : ""}`}
+                      >
+                        <div className="w-10 h-10 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-sm mb-3">
+                          {plan.name.charAt(0)}
+                        </div>
+                        <h4 className="font-semibold text-foreground">{plan.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
+                        <div className="flex justify-between items-center mt-3">
+                          <span className="text-xs text-muted-foreground">{plan.duration} days</span>
+                          <span className="font-bold text-primary">${plan.price}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -292,10 +365,10 @@ export default function Onboarding() {
           ) : (
             <button
               onClick={handleFinish}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isLoading}
               className="btn-maroon py-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Account →
+              {isLoading ? "Saving..." : user ? "Complete Setup →" : "Create Account →"}
             </button>
           )}
         </div>

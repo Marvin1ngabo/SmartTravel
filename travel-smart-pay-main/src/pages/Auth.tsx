@@ -42,6 +42,7 @@ export default function Auth() {
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
+        // Will be redirected by useEffect based on onboarding status
       } else {
         await register({
           email: form.email,
@@ -52,10 +53,10 @@ export default function Auth() {
         });
         toast({
           title: "Account created!",
-          description: "Welcome to VoyageShield.",
+          description: "Let's set up your travel insurance.",
         });
+        navigate("/onboarding");
       }
-      navigate("/dashboard");
     } catch (error: any) {
       toast({
         title: "Error",

@@ -125,6 +125,12 @@ export const getProfile = async (req: Request, res: Response) => {
         firstName: true,
         lastName: true,
         phone: true,
+        destination: true,
+        travelDate: true,
+        purpose: true,
+        selectedPlanId: true,
+        paymentPlan: true,
+        hasCompletedOnboarding: true,
         createdAt: true,
       },
     });

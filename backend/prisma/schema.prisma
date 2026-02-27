@@ -14,11 +14,21 @@ model User {
   firstName String?
   lastName  String?
   phone     String?
+  
+  // Travel details
+  destination     String?
+  travelDate      DateTime?
+  purpose         String?
+  selectedPlanId  String?
+  paymentPlan     String?  // "gradual" or "full"
+  hasCompletedOnboarding Boolean @default(false)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   payments  Payment[]
   policies  InsurancePolicy[]
+  selectedPlan InsurancePlan? @relation(fields: [selectedPlanId], references: [id], name: "UserSelectedPlan")
 }
 
 model Payment {
@@ -51,6 +61,7 @@ model InsurancePlan {
   updatedAt   DateTime @updatedAt
 
   policies    InsurancePolicy[]
+  selectedByUsers User[] @relation(name: "UserSelectedPlan")
 }
 
 model InsurancePolicy {

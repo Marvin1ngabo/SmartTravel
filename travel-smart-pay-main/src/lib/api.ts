@@ -101,6 +101,20 @@ class ApiClient {
   async getPaymentStatus(paymentId: string) {
     return this.request<any>(`/payments/${paymentId}`);
   }
+
+  // User endpoints
+  async updateOnboarding(data: {
+    destination: string;
+    travelDate: string;
+    purpose: string;
+    selectedPlanId: string;
+    paymentPlan: string;
+  }) {
+    return this.request<any>('/user/onboarding', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

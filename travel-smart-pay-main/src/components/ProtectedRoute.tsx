@@ -16,5 +16,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
+  // Check if user has completed onboarding
+  if (!user.hasCompletedOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return <>{children}</>;
 }
