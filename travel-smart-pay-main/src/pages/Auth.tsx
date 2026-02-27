@@ -51,11 +51,23 @@ export default function Auth() {
           lastName: form.lastName,
           phone: form.phone,
         });
-        toast({
-          title: "Account created!",
-          description: "Let's set up your travel insurance.",
-        });
-        navigate("/onboarding");
+        
+        // Check if there's saved onboarding data
+        const savedData = localStorage.getItem('onboarding_data');
+        if (savedData) {
+          toast({
+            title: "Account created!",
+            description: "Completing your setup...",
+          });
+          // Will complete onboarding automatically
+          navigate("/onboarding");
+        } else {
+          toast({
+            title: "Account created!",
+            description: "Let's set up your travel insurance.",
+          });
+          navigate("/onboarding");
+        }
       }
     } catch (error: any) {
       toast({

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-const steps = ["Travel Details", "Purpose", "Provider", "Payment Plan"];
+const steps = ["Travel Details", "Purpose", "Provider"];
 
 const purposes = [
   { id: "tourism", label: "Tourism", icon: "🏖️", desc: "Leisure travel and sightseeing" },
@@ -26,7 +26,7 @@ export default function Onboarding() {
     purpose: "",
     provider: "",
     providerId: "",
-    paymentPlan: "",
+    paymentPlan: "gradual", // Default to gradual
     travelDate: "",
   });
 
@@ -34,6 +34,42 @@ export default function Onboarding() {
     // Redirect to dashboard if already completed onboarding
     if (user?.hasCompletedOnboarding) {
       navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    // Check for saved onboarding data and auto-complete if user just registered
+    const savedData = localStorage.getItem('onboarding_data');
+    if (savedData && user) {
+      const parsedData = JSON.parse(savedData);
+      setData(parsedData);
+      
+      // Auto-complete onboarding
+      const completeOnboarding = async () => {
+        try {
+          await api.updateOnboarding({
+            destination: parsedData.country,
+            travelDate: new Date(parsedData.travelDate).toISOString(),
+            purpose: parsedData.purpose,
+            selectedPlanId: parsedData.providerId,
+            paymentPlan: parsedData.paymentPlan,
+          });
+          
+          localStorage.removeItem('onboarding_data');
+          toast({
+            title: "Setup complete!",
+            description: "Welcome to your dashboard.",
+          });
+          
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+          }, 500);
+        } catch (error) {
+          console.error('Auto-complete onboarding error:', error);
+          localStorage.removeItem('onboarding_data');
+        }
+      };
+      
+      completeOnboarding();
     }
   }, [user, navigate]);
 
@@ -61,17 +97,17 @@ export default function Onboarding() {
       case 0: return !!data.travelDate;
       case 1: return !!data.purpose;
       case 2: return !!data.provider;
-      case 3: return !!data.paymentPlan;
       default: return false;
     }
   };
 
   const handleFinish = async () => {
     if (!user) {
-      // Not logged in, go to auth
+      // Not logged in, save to localStorage and go to auth
+      localStorage.setItem('onboarding_data', JSON.stringify(data));
       toast({
-        title: "Please sign in first",
-        description: "Create an account to continue",
+        title: "Almost there!",
+        description: "Create an account to complete your setup",
       });
       navigate("/auth");
       return;
@@ -79,7 +115,7 @@ export default function Onboarding() {
 
     setIsLoading(true);
     try {
-      const updatedUser = await api.updateOnboarding({
+      await api.updateOnboarding({
         destination: data.country,
         travelDate: new Date(data.travelDate).toISOString(),
         purpose: data.purpose,
@@ -250,48 +286,6 @@ export default function Onboarding() {
                 )}
               </div>
             )}
-
-            {/* Step 3: Payment Plan */}
-            {step === 3 && (
-              <div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Choose Your Payment Plan</h2>
-                <p className="text-muted-foreground mb-6">How would you like to pay for your insurance?</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setData({ ...data, paymentPlan: "gradual" })}
-                    className={`glass-card-elevated p-6 text-left transition-all duration-300 hover:scale-[1.02] ${
-                      data.paymentPlan === "gradual" ? "border-2 border-primary shadow-lg" : ""
-                    }`}
-                  >
-                    <span className="text-3xl">💰</span>
-                    <p className="font-serif text-lg font-bold text-foreground mt-3">Save Gradually</p>
-                    <p className="text-sm text-muted-foreground mt-1">Make small contributions over time before your trip</p>
-                    {selectedProvider && (
-                      <div className="mt-4 glass-card p-3">
-                        <p className="text-xs text-muted-foreground">Suggested weekly payment</p>
-                        <p className="font-bold text-primary">${Math.ceil(selectedProvider.price / 8)}/week</p>
-                      </div>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setData({ ...data, paymentPlan: "full" })}
-                    className={`glass-card-elevated p-6 text-left transition-all duration-300 hover:scale-[1.02] ${
-                      data.paymentPlan === "full" ? "border-2 border-primary shadow-lg" : ""
-                    }`}
-                  >
-                    <span className="text-3xl">💳</span>
-                    <p className="font-serif text-lg font-bold text-foreground mt-3">Pay Full Now</p>
-                    <p className="text-sm text-muted-foreground mt-1">Complete payment in one go and get instant coverage</p>
-                    {selectedProvider && (
-                      <div className="mt-4 glass-card p-3">
-                        <p className="text-xs text-muted-foreground">Total amount</p>
-                        <p className="font-bold text-primary">${selectedProvider.price}</p>
-                      </div>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
           </motion.div>
         </AnimatePresence>
 
@@ -317,7 +311,7 @@ export default function Onboarding() {
               disabled={!canProceed() || isLoading}
               className="btn-maroon py-2 px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Saving..." : user ? "Complete Setup →" : "Create Account →"}
+              {isLoading ? "Saving..." : user ? "Go to Dashboard →" : "Create Account →"}
             </button>
           )}
         </div>
