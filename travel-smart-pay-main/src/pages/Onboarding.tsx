@@ -139,6 +139,9 @@ export default function Onboarding() {
         response: error.response,
       });
       
+      // Show detailed error
+      alert(`Error: ${error.message}\n\nCheck console for details.\n\nIs backend running on http://localhost:3001?`);
+      
       toast({
         title: "Error",
         description: error.message || "Failed to save onboarding data. Please check console for details.",
