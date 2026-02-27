@@ -125,36 +125,43 @@ export default function Onboarding() {
 
     setIsLoading(true);
     try {
-      console.log('Sending onboarding data:', {
+      const payload = {
         destination: data.country,
         travelDate: new Date(data.travelDate).toISOString(),
         purpose: data.purpose,
         selectedPlanId: data.providerId,
         paymentPlan: data.paymentPlan,
-      });
+      };
 
-      await api.updateOnboarding({
-        destination: data.country,
-        travelDate: new Date(data.travelDate).toISOString(),
-        purpose: data.purpose,
-        selectedPlanId: data.providerId,
-        paymentPlan: data.paymentPlan,
-      });
+      console.log('User:', user);
+      console.log('Sending onboarding data:', payload);
+
+      const result = await api.updateOnboarding(payload);
+      
+      console.log('Onboarding result:', result);
 
       toast({
         title: "Setup complete!",
         description: "Your travel insurance is ready to go.",
       });
 
+      // Clear saved data
+      localStorage.removeItem('onboarding_data');
+
       // Force reload to update user context
       setTimeout(() => {
         window.location.href = "/dashboard";
       }, 500);
     } catch (error: any) {
-      console.error('Onboarding error:', error);
+      console.error('Onboarding error details:', {
+        error,
+        message: error.message,
+        response: error.response,
+      });
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to save onboarding data. Please try again.",
+        description: error.message || "Failed to save onboarding data. Please check console for details.",
         variant: "destructive",
       });
     } finally {

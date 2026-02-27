@@ -33,10 +33,15 @@ class ApiClient {
       },
     };
 
+    console.log('API Request:', { url, method: config.method, body: options?.body });
+
     const response = await fetch(url, config);
     const data = await response.json();
 
+    console.log('API Response:', { status: response.status, data });
+
     if (!response.ok) {
+      console.error('API Error Response:', data);
       throw new Error(data.error || 'Something went wrong');
     }
 
@@ -76,11 +81,16 @@ class ApiClient {
     selectedPlanId: string;
     paymentPlan: string;
   }) {
-    const response = await this.request<any>('/user/onboarding', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return response;
+    try {
+      const response = await this.request<any>('/user/onboarding', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+      return response;
+    } catch (error: any) {
+      console.error('API Error:', error);
+      throw error;
+    }
   }
   async getInsurancePlans() {
     return this.request<any[]>('/insurance/options');
