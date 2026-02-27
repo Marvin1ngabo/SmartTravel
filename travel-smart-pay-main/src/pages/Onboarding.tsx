@@ -5,22 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-const steps = ["Destination", "Purpose", "Insurance Info", "Provider", "Payment Plan"];
-
-const countries = [
-  { name: "Canada", flag: "🇨🇦", risk: "Low", minInsurance: 250 },
-  { name: "United States", flag: "🇺🇸", risk: "Medium", minInsurance: 300 },
-  { name: "United Kingdom", flag: "🇬🇧", risk: "Low", minInsurance: 280 },
-  { name: "France", flag: "🇫🇷", risk: "Low", minInsurance: 220 },
-  { name: "Germany", flag: "🇩🇪", risk: "Low", minInsurance: 220 },
-  { name: "Nigeria", flag: "🇳🇬", risk: "Medium", minInsurance: 200 },
-  { name: "South Africa", flag: "🇿🇦", risk: "Medium", minInsurance: 180 },
-  { name: "Kenya", flag: "🇰🇪", risk: "Medium", minInsurance: 180 },
-  { name: "Japan", flag: "🇯🇵", risk: "Low", minInsurance: 400 },
-  { name: "Australia", flag: "🇦🇺", risk: "Low", minInsurance: 350 },
-  { name: "Syria", flag: "🇸🇾", risk: "High", minInsurance: 500 },
-  { name: "Brazil", flag: "🇧🇷", risk: "Medium", minInsurance: 250 },
-];
+const steps = ["Travel Details", "Purpose", "Provider", "Payment Plan"];
 
 const purposes = [
   { id: "tourism", label: "Tourism", icon: "🏖️", desc: "Leisure travel and sightseeing" },
@@ -37,7 +22,7 @@ export default function Onboarding() {
   const [isLoading, setIsLoading] = useState(false);
   const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
   const [data, setData] = useState({
-    country: "",
+    country: "Rwanda", // Fixed to Rwanda
     purpose: "",
     provider: "",
     providerId: "",
@@ -69,16 +54,14 @@ export default function Onboarding() {
     }
   };
 
-  const selectedCountry = countries.find(c => c.name === data.country);
   const selectedProvider = insurancePlans.find(p => p.id === data.providerId);
 
   const canProceed = () => {
     switch (step) {
-      case 0: return !!data.country && !!data.travelDate;
+      case 0: return !!data.travelDate;
       case 1: return !!data.purpose;
-      case 2: return true;
-      case 3: return !!data.provider;
-      case 4: return !!data.paymentPlan;
+      case 2: return !!data.provider;
+      case 3: return !!data.paymentPlan;
       default: return false;
     }
   };
@@ -124,11 +107,6 @@ export default function Onboarding() {
       setIsLoading(false);
     }
   };
-
-  const riskColor = (risk: string) =>
-    risk === "Low" ? "bg-green-100 text-green-800" :
-    risk === "Medium" ? "bg-yellow-100 text-yellow-800" :
-    "bg-red-100 text-red-800";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -177,37 +155,39 @@ export default function Onboarding() {
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.3 }}
           >
-            {/* Step 0: Country */}
+            {/* Step 0: Travel Details */}
             {step === 0 && (
               <div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Where are you traveling?</h2>
-                <p className="text-muted-foreground mb-6">Select your destination country and travel date</p>
-                <div className="mb-6">
-                  <label className="text-sm font-medium text-foreground mb-2 block">Travel Date</label>
-                  <input
-                    type="date"
-                    value={data.travelDate}
-                    onChange={e => setData({ ...data, travelDate: e.target.value })}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="input-field max-w-md"
-                  />
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {countries.map(c => (
-                    <button
-                      key={c.name}
-                      onClick={() => setData({ ...data, country: c.name })}
-                      className={`glass-card p-4 text-left transition-all duration-300 hover:scale-[1.02] ${
-                        data.country === c.name ? "border-2 border-primary shadow-lg" : ""
-                      }`}
-                    >
-                      <span className="text-2xl">{c.flag}</span>
-                      <p className="font-semibold text-foreground text-sm mt-2">{c.name}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${riskColor(c.risk)}`}>
-                        {c.risk} Risk
-                      </span>
-                    </button>
-                  ))}
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Travel to Rwanda 🇷🇼</h2>
+                <p className="text-muted-foreground mb-6">When are you planning to travel?</p>
+                
+                <div className="glass-card-elevated p-6 sm:p-8 space-y-6">
+                  <div className="flex items-center gap-4 pb-4 border-b border-border/50">
+                    <span className="text-5xl">🇷🇼</span>
+                    <div>
+                      <p className="font-serif text-2xl font-bold text-foreground">Rwanda</p>
+                      <p className="text-sm text-muted-foreground">Land of a Thousand Hills</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Travel Date</label>
+                    <input
+                      type="date"
+                      value={data.travelDate}
+                      onChange={e => setData({ ...data, travelDate: e.target.value })}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="input-field w-full"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">Select when you plan to arrive in Rwanda</p>
+                  </div>
+
+                  <div className="glass-card p-4 border-l-4 border-primary">
+                    <p className="text-sm text-foreground font-semibold">ℹ️ Travel Insurance Required</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Travel insurance is recommended for all visitors to Rwanda. Choose from our trusted providers to ensure you're covered.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -235,51 +215,11 @@ export default function Onboarding() {
               </div>
             )}
 
-            {/* Step 2: Insurance Info */}
-            {step === 2 && selectedCountry && (
-              <div>
-                <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Insurance Requirements</h2>
-                <p className="text-muted-foreground mb-6">Based on your destination and purpose</p>
-                <div className="glass-card-elevated p-6 sm:p-8 space-y-6">
-                  <div className="flex items-center gap-4">
-                    <span className="text-4xl">{selectedCountry.flag}</span>
-                    <div>
-                      <p className="font-serif text-xl font-bold text-foreground">{selectedCountry.name}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${riskColor(selectedCountry.risk)}`}>
-                        {selectedCountry.risk} Risk
-                      </span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="glass-card p-4 text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Minimum Insurance</p>
-                      <p className="font-serif text-2xl font-bold text-primary mt-1">${selectedCountry.minInsurance}</p>
-                    </div>
-                    <div className="glass-card p-4 text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Risk Level</p>
-                      <p className="font-serif text-2xl font-bold text-foreground mt-1">{selectedCountry.risk}</p>
-                    </div>
-                    <div className="glass-card p-4 text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Visa Compliance</p>
-                      <p className="font-serif text-2xl font-bold text-foreground mt-1">✓ Required</p>
-                    </div>
-                  </div>
-                  <div className="glass-card p-4 border-l-4 border-primary">
-                    <p className="text-sm text-foreground font-semibold">💡 Recommendation</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      For {data.purpose === "study" ? "students" : data.purpose === "work" ? "workers" : data.purpose === "business" ? "business travelers" : "tourists"} visiting {selectedCountry.name}, 
-                      we recommend comprehensive coverage of at least ${selectedCountry.minInsurance}. This ensures visa compliance and full protection.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Provider */}
-            {step === 3 && (
+            {/* Step 2: Provider */}
+            {step === 2 && (
               <div>
                 <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Choose Your Provider</h2>
-                <p className="text-muted-foreground mb-2">Recommended providers for {data.country}</p>
+                <p className="text-muted-foreground mb-2">Trusted insurance companies for Rwanda travel</p>
                 <button onClick={() => navigate("/compare")} className="text-sm text-primary font-semibold hover:underline mb-6 inline-block">
                   📊 Compare providers side by side →
                 </button>
@@ -311,8 +251,8 @@ export default function Onboarding() {
               </div>
             )}
 
-            {/* Step 4: Payment Plan */}
-            {step === 4 && (
+            {/* Step 3: Payment Plan */}
+            {step === 3 && (
               <div>
                 <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-2">Choose Your Payment Plan</h2>
                 <p className="text-muted-foreground mb-6">How would you like to pay for your insurance?</p>
