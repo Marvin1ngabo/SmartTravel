@@ -8,7 +8,7 @@ const updateOnboardingSchema = z.object({
     message: "Invalid date format",
   }),
   purpose: z.string().min(1),
-  selectedPlanId: z.string().uuid(),
+  selectedPlanId: z.string().min(1), // Changed from uuid() to accept any string
   paymentPlan: z.enum(['gradual', 'full']),
 });
 

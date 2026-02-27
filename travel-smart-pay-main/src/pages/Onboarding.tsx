@@ -94,10 +94,28 @@ export default function Onboarding() {
     }
 
     // Validate data before sending
-    if (!data.travelDate || !data.purpose || !data.providerId) {
+    if (!data.travelDate) {
       toast({
-        title: "Missing information",
-        description: "Please complete all steps",
+        title: "Missing travel date",
+        description: "Please select your travel date",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.purpose) {
+      toast({
+        title: "Missing purpose",
+        description: "Please select your travel purpose",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!data.providerId) {
+      toast({
+        title: "Missing insurance provider",
+        description: "Please select an insurance provider",
         variant: "destructive",
       });
       return;
