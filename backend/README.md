@@ -24,18 +24,23 @@ Server runs on http://localhost:3001
 ### Health Check
 - `GET /health` - Server health status
 
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/profile` - Get user profile (protected)
+
 ### Payments
-- `POST /api/payments` - Create payment
-- `GET /api/payments/:id` - Get payment status
+- `POST /api/payments` - Create payment (protected)
+- `GET /api/payments/:id` - Get payment status (protected)
 
 ### Insurance
 - `GET /api/insurance/options` - Get insurance plans
-- `POST /api/insurance/policy` - Create insurance policy
+- `POST /api/insurance/policy` - Create insurance policy (protected)
 
 ## TODO
 
 - [x] Add database (PostgreSQL + Prisma)
-- [ ] Implement authentication (JWT)
+- [x] Implement authentication (JWT)
 - [ ] Integrate Stripe for payments
 - [ ] Add request validation middleware
 - [ ] Add rate limiting
