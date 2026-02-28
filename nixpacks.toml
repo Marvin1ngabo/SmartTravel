@@ -5,7 +5,12 @@ nixPkgs = ["nodejs", "npm"]
 cmds = ["cd backend && npm install"]
 
 [phases.build]
-cmds = ["cd backend && npx prisma generate && npm run build"]
+cmds = [
+  "cd backend",
+  "export DATABASE_URL='postgresql://placeholder'",
+  "npx prisma generate",
+  "npm run build"
+]
 
 [start]
 cmd = "cd backend && npm start"
