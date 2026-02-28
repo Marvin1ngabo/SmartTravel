@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import QRCode from "react-qr-code";
 
 export default function Certificate() {
   const navigate = useNavigate();
@@ -55,7 +56,8 @@ export default function Certificate() {
     );
   }
 
-  const policyNumber = `VS-${new Date().getFullYear()}-${user.id.slice(0, 8).toUpperCase()}`;
+  const policyNumber = `VS-${new Date().getFullYear()}-${user.id}`;
+  const verificationUrl = `${window.location.origin}/verify/${policyNumber}`;
   const issueDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const travelDate = user.travelDate ? new Date(user.travelDate) : new Date();
   const expiryDate = new Date(travelDate);
@@ -125,38 +127,25 @@ export default function Certificate() {
             </span>
           </div>
 
-          {/* Mock QR Code */}
+          {/* Real QR Code */}
           <div className="text-center mb-6">
             <div className="inline-block glass-card p-4">
-              <div className="w-32 h-32 mx-auto bg-white rounded-xl flex items-center justify-center relative overflow-hidden border-2 border-border">
-                {/* Simple QR-like pattern */}
-                <div className="absolute inset-0 grid grid-cols-8 grid-rows-8 gap-0">
-                  {Array.from({ length: 64 }).map((_, i) => {
-                    // Create a deterministic pattern based on policy number
-                    const shouldFill = (i + policyNumber.length) % 3 !== 0;
-                    return (
-                      <div
-                        key={i}
-                        className={`${shouldFill ? "bg-foreground" : "bg-white"}`}
-                      />
-                    );
-                  })}
-                </div>
-                {/* Center logo */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded bg-white border-2 border-foreground flex items-center justify-center">
-                    <span className="text-xs font-bold text-foreground">VS</span>
-                  </div>
-                </div>
+              <div className="bg-white p-4 rounded-xl">
+                <QRCode
+                  value={verificationUrl}
+                  size={160}
+                  level="H"
+                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Scan to verify authenticity</p>
+              <p className="text-xs text-muted-foreground mt-3 font-semibold">Scan to verify authenticity</p>
               <a 
-                href={`${window.location.origin}/verify/${policyNumber}`}
+                href={verificationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline mt-1 block"
+                className="text-xs text-primary hover:underline mt-2 block font-medium"
               >
-                Or click here to verify
+                Or click here to verify online
               </a>
             </div>
           </div>

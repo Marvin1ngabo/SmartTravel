@@ -232,11 +232,16 @@ export const verifyCertificate = async (req: Request, res: Response) => {
     
     // Extract user ID from policy number (format: VS-YEAR-USERID)
     const parts = policyNumber.split('-');
+    console.log('Policy number parts:', parts);
+    
     if (parts.length < 3) {
+      console.log('Invalid format - not enough parts');
       return res.status(404).json({ error: 'Invalid policy number format' });
     }
     
-    const userId = parts.slice(2).join('-'); // Handle UUIDs with dashes
+    // Join all parts after the year (in case UUID has dashes)
+    const userId = parts.slice(2).join('-');
+    console.log('Extracted user ID:', userId);
     
     // Get user with their selected plan
     const user = await prisma.user.findUnique({
@@ -252,18 +257,23 @@ export const verifyCertificate = async (req: Request, res: Response) => {
       },
     });
     
+    console.log('User found:', user ? 'Yes' : 'No');
+    
     if (!user) {
       return res.status(404).json({ error: 'Certificate not found' });
     }
     
     // Check if user has completed onboarding and has a plan
     if (!user.hasCompletedOnboarding || !user.selectedPlan) {
+      console.log('User has not completed onboarding or no plan selected');
       return res.status(404).json({ error: 'Certificate not issued yet' });
     }
     
     // Calculate total paid
     const totalPaid = user.payments.reduce((sum, p) => sum + p.amount, 0);
     const required = user.selectedPlan.price;
+    
+    console.log('Payment status:', { totalPaid, required, fullyPaid: totalPaid >= required });
     
     // Check if fully paid
     if (totalPaid < required) {
@@ -293,6 +303,7 @@ export const verifyCertificate = async (req: Request, res: Response) => {
       verifiedAt: new Date().toISOString(),
     };
     
+    console.log('Certificate verified successfully');
     res.json(certificate);
   } catch (error) {
     console.error('Verify certificate error:', error);
