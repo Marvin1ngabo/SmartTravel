@@ -49,11 +49,13 @@ export default function Dashboard() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
-    if (authUser?.selectedPlanId) {
-      loadSelectedPlan();
+    if (authUser) {
+      if (authUser.selectedPlanId) {
+        loadSelectedPlan();
+      } else {
+        setIsLoadingPlan(false);
+      }
       loadPaymentHistory();
-    } else {
-      setIsLoadingPlan(false);
     }
   }, [authUser]);
 
@@ -65,6 +67,7 @@ export default function Dashboard() {
         setSelectedPlan(plan);
       }
     } catch (error: any) {
+      console.error('Failed to load plan:', error);
       toast({
         title: "Error",
         description: "Failed to load insurance plan",
@@ -78,10 +81,13 @@ export default function Dashboard() {
   const loadPaymentHistory = async () => {
     try {
       const data = await api.getUserPayments();
-      setPayments(data.payments);
-      setTotalPaid(data.totalPaid);
+      setPayments(data.payments || []);
+      setTotalPaid(data.totalPaid || 0);
     } catch (error: any) {
       console.error('Failed to load payment history:', error);
+      // Don't show error toast for payment history, just log it
+      setPayments([]);
+      setTotalPaid(0);
     }
   };
 
@@ -94,10 +100,10 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  const requiredAmount = selectedPlan?.price || 250;
-  const balance = requiredAmount - totalPaid;
+  const requiredAmount = selectedPlan?.price || mockUser.requiredAmount;
+  const balance = Math.max(0, requiredAmount - totalPaid);
   const progress = Math.round((totalPaid / requiredAmount) * 100);
-  const destination = authUser?.destination || "Rwanda";
+  const destination = authUser?.destination || mockUser.destination;
   const risk = riskLevels[destination] || { level: "Medium", color: "bg-yellow-100 text-yellow-800", minInsurance: "$200", compliance: "Pending" };
 
   const travelDate = authUser?.travelDate ? new Date(authUser.travelDate) : new Date(mockUser.travelDate);
@@ -287,7 +293,7 @@ export default function Dashboard() {
         </div>
 
         {/* Payment Timeline */}
-        <PaymentTimeline progress={progress} contributions={payments.map(p => ({
+        <PaymentTimeline progress={progress} contributions={(payments || []).map(p => ({
           date: new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           amount: p.amount,
           method: p.metadata?.method || 'Online Payment',
@@ -379,28 +385,35 @@ export default function Dashboard() {
           </button>
           {showHistory && (
             <div className="glass-card-elevated overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Date</th>
-                      <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Amount</th>
-                      <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Method</th>
-                      <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p, i) => (
-                      <tr key={i} className="border-b border-border/50 last:border-0">
-                        <td className="p-4 text-sm text-foreground">{new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
-                        <td className="p-4 text-sm font-semibold text-primary">${p.amount}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{p.metadata?.method || 'Online Payment'}</td>
-                        <td className="p-4"><span className={`text-xs px-2 py-1 rounded-full ${p.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status === 'completed' ? 'Successful' : 'Pending'}</span></td>
+              {payments.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Amount</th>
+                        <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Method</th>
+                        <th className="text-left p-4 text-xs text-muted-foreground uppercase tracking-wider">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {payments.map((p, i) => (
+                        <tr key={i} className="border-b border-border/50 last:border-0">
+                          <td className="p-4 text-sm text-foreground">{new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                          <td className="p-4 text-sm font-semibold text-primary">${p.amount}</td>
+                          <td className="p-4 text-sm text-muted-foreground">{p.metadata?.method || 'Online Payment'}</td>
+                          <td className="p-4"><span className={`text-xs px-2 py-1 rounded-full ${p.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status === 'completed' ? 'Successful' : 'Pending'}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-muted-foreground">No payment history yet</p>
+                  <p className="text-sm text-muted-foreground mt-2">Make your first contribution to get started</p>
+                </div>
+              )}
             </div>
           )}
         </div>

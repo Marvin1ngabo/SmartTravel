@@ -5,8 +5,8 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 
 router.post('/', authenticate, createPayment);
-router.get('/:id', authenticate, getPaymentStatus);
 router.get('/user/history', authenticate, getUserPayments);
 router.get('/admin/all', authenticate, getAllPayments);
+router.get('/:id', authenticate, getPaymentStatus);
 
 export default router;

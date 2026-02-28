@@ -29,14 +29,15 @@ export default function Admin() {
     setIsLoading(true);
     try {
       const [usersData, paymentsData, plansData] = await Promise.all([
-        api.getAllUsers(),
-        api.getAllPayments(),
-        api.getInsurancePlans(),
+        api.getAllUsers().catch(err => { console.error('Failed to load users:', err); return []; }),
+        api.getAllPayments().catch(err => { console.error('Failed to load payments:', err); return []; }),
+        api.getInsurancePlans().catch(err => { console.error('Failed to load plans:', err); return []; }),
       ]);
-      setUsers(usersData);
-      setPayments(paymentsData);
-      setInsurancePlans(plansData);
+      setUsers(usersData || []);
+      setPayments(paymentsData || []);
+      setInsurancePlans(plansData || []);
     } catch (error: any) {
+      console.error('Load data error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to load data",
