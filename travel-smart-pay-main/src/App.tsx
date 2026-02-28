@@ -9,7 +9,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
+import Admin from "./pages/AdminEnhanced";
 import Onboarding from "./pages/Onboarding";
 import InsuranceComparison from "./pages/InsuranceComparison";
 import Certificate from "./pages/Certificate";
