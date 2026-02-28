@@ -110,9 +110,6 @@ export default function Dashboard() {
   const today = new Date();
   const daysLeft = Math.max(0, Math.ceil((travelDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
-  const weeksLeft = Math.max(1, Math.floor(daysLeft / 7));
-  const weeklyAmount = Math.ceil(balance / weeksLeft);
-
   const handleContribute = async (amount: number) => {
     if (amount <= 0 || amount > balance || isProcessingPayment) return;
     
@@ -257,39 +254,25 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Risk + Smart Suggestion */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="glass-card-elevated p-5 animate-fade-in">
-            <h3 className="font-serif text-lg font-bold text-foreground mb-4">🌍 Travel Risk Assessment</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Risk Level</span>
-                <span className={`text-xs px-3 py-1 rounded-full font-medium ${risk.color}`}>{risk.level}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Min. Insurance Required</span>
-                <span className="text-sm font-semibold text-foreground">{risk.minInsurance}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Visa Compliance</span>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${risk.compliance === "Compliant" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
-                  {risk.compliance}
-                </span>
-              </div>
+        {/* Travel Risk Assessment */}
+        <div className="glass-card-elevated p-5 animate-fade-in max-w-md">
+          <h3 className="font-serif text-lg font-bold text-foreground mb-4">🌍 Travel Risk Assessment</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Risk Level</span>
+              <span className={`text-xs px-3 py-1 rounded-full font-medium ${risk.color}`}>{risk.level}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Min. Insurance Required</span>
+              <span className="text-sm font-semibold text-foreground">{risk.minInsurance}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Visa Compliance</span>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${risk.compliance === "Compliant" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                {risk.compliance}
+              </span>
             </div>
           </div>
-
-          {balance > 0 && (
-            <div className="glass-card-elevated p-5 border-l-4 border-primary animate-fade-in">
-              <h3 className="font-serif text-lg font-bold text-foreground mb-2">💡 Smart Suggestion</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                Pay <span className="font-bold text-primary">${weeklyAmount}/week</span> to finish before departure ({weeksLeft} weeks remaining).
-              </p>
-              <button onClick={() => handleContribute(weeklyAmount)} className="btn-maroon py-2 px-4 text-sm w-full">
-                Contribute ${weeklyAmount} Now
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Payment Timeline */}
