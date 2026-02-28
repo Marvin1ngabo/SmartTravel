@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 
 const createPaymentSchema = z.object({
   amount: z.number().positive(),
-  currency: z.string().length(3).default('USD'),
+  currency: z.string().optional().default('USD'),
   method: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
@@ -12,39 +12,34 @@ const createPaymentSchema = z.object({
 export const createPayment = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
+    
+    console.log('Create payment request:', { userId, body: req.body });
+    
     const data = createPaymentSchema.parse(req.body);
+    
+    console.log('Parsed payment data:', data);
     
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
         amount: data.amount,
-        currency: data.currency,
+        currency: data.currency || 'USD',
         userId: userId,
         status: 'completed', // Mark as completed for now (TODO: integrate Stripe)
-        metadata: {
-          ...data.metadata,
-          method: data.method || 'Online Payment',
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
+        metadata: data.metadata || { method: data.method || 'Online Payment' },
       },
     });
+
+    console.log('Payment created successfully:', payment.id);
 
     res.status(201).json(payment);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       res.status(400).json({ error: 'Invalid request data', details: error.errors });
     } else {
       console.error('Create payment error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Internal server error', details: (error as Error).message });
     }
   }
 };
