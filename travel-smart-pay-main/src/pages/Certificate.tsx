@@ -128,17 +128,36 @@ export default function Certificate() {
           {/* Mock QR Code */}
           <div className="text-center mb-6">
             <div className="inline-block glass-card p-4">
-              <div className="w-32 h-32 mx-auto bg-foreground/10 rounded-xl flex items-center justify-center relative overflow-hidden">
-                <div className="grid grid-cols-8 gap-0.5 p-2">
-                  {Array.from({ length: 64 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-3 h-3 rounded-sm ${Math.random() > 0.4 ? "bg-foreground" : "bg-transparent"}`}
-                    />
-                  ))}
+              <div className="w-32 h-32 mx-auto bg-white rounded-xl flex items-center justify-center relative overflow-hidden border-2 border-border">
+                {/* Simple QR-like pattern */}
+                <div className="absolute inset-0 grid grid-cols-8 grid-rows-8 gap-0">
+                  {Array.from({ length: 64 }).map((_, i) => {
+                    // Create a deterministic pattern based on policy number
+                    const shouldFill = (i + policyNumber.length) % 3 !== 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`${shouldFill ? "bg-foreground" : "bg-white"}`}
+                      />
+                    );
+                  })}
+                </div>
+                {/* Center logo */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded bg-white border-2 border-foreground flex items-center justify-center">
+                    <span className="text-xs font-bold text-foreground">VS</span>
+                  </div>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">Scan to verify authenticity</p>
+              <a 
+                href={`${window.location.origin}/verify/${policyNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline mt-1 block"
+              >
+                Or click here to verify
+              </a>
             </div>
           </div>
 

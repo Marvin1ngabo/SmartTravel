@@ -13,6 +13,7 @@ import Admin from "./pages/AdminEnhanced";
 import Onboarding from "./pages/Onboarding";
 import InsuranceComparison from "./pages/InsuranceComparison";
 import Certificate from "./pages/Certificate";
+import VerifyCertificate from "./pages/VerifyCertificate";
 import FAQ from "./pages/FAQ";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/compare" element={<InsuranceComparison />} />
             <Route path="/certificate" element={<ProtectedRoute><Certificate /></ProtectedRoute>} />
+            <Route path="/verify/:policyNumber" element={<VerifyCertificate />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

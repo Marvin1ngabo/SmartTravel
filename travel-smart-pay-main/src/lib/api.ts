@@ -171,6 +171,11 @@ class ApiClient {
   async getAllUsers() {
     return this.request<any[]>('/insurance/admin/users');
   }
+
+  // Certificate verification
+  async verifyCertificate(policyNumber: string) {
+    return this.request<any>(`/insurance/verify/${policyNumber}`);
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

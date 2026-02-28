@@ -223,3 +223,79 @@ export const getAllUsers = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const verifyCertificate = async (req: Request, res: Response) => {
+  try {
+    const { policyNumber } = req.params;
+    
+    console.log('Verifying certificate:', policyNumber);
+    
+    // Extract user ID from policy number (format: VS-YEAR-USERID)
+    const parts = policyNumber.split('-');
+    if (parts.length < 3) {
+      return res.status(404).json({ error: 'Invalid policy number format' });
+    }
+    
+    const userId = parts.slice(2).join('-'); // Handle UUIDs with dashes
+    
+    // Get user with their selected plan
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        selectedPlan: true,
+        payments: {
+          where: { status: 'completed' },
+          select: {
+            amount: true,
+          },
+        },
+      },
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Certificate not found' });
+    }
+    
+    // Check if user has completed onboarding and has a plan
+    if (!user.hasCompletedOnboarding || !user.selectedPlan) {
+      return res.status(404).json({ error: 'Certificate not issued yet' });
+    }
+    
+    // Calculate total paid
+    const totalPaid = user.payments.reduce((sum, p) => sum + p.amount, 0);
+    const required = user.selectedPlan.price;
+    
+    // Check if fully paid
+    if (totalPaid < required) {
+      return res.status(400).json({ error: 'Certificate not valid - payment incomplete' });
+    }
+    
+    // Calculate dates
+    const issueDate = user.createdAt;
+    const travelDate = user.travelDate ? new Date(user.travelDate) : new Date();
+    const expiryDate = new Date(travelDate);
+    expiryDate.setDate(expiryDate.getDate() + user.selectedPlan.duration);
+    
+    // Build certificate data
+    const certificate = {
+      policyNumber,
+      holderName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+      email: user.email,
+      destination: user.destination,
+      purpose: user.purpose,
+      providerName: user.selectedPlan.name,
+      coverageAmount: user.selectedPlan.price,
+      duration: user.selectedPlan.duration,
+      issueDate: issueDate.toISOString(),
+      expiryDate: expiryDate.toISOString(),
+      status: 'active',
+      verified: true,
+      verifiedAt: new Date().toISOString(),
+    };
+    
+    res.json(certificate);
+  } catch (error) {
+    console.error('Verify certificate error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
