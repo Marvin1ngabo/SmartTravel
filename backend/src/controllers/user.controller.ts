@@ -35,6 +35,8 @@ export const updateOnboarding = async (req: Request, res: Response) => {
         firstName: true,
         lastName: true,
         phone: true,
+        role: true,
+        isEmailVerified: true,
         destination: true,
         travelDate: true,
         purpose: true,

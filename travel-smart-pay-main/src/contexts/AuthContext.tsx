@@ -8,6 +8,7 @@ interface User {
   lastName?: string;
   phone?: string;
   role?: string;
+  isEmailVerified?: boolean;
   destination?: string;
   travelDate?: string;
   purpose?: string;
