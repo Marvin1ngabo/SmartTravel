@@ -16,6 +16,11 @@ model User {
   phone     String?
   role      String   @default("user") // "user" or "admin"
   
+  // Email verification
+  isEmailVerified Boolean @default(false)
+  verificationCode String?
+  verificationCodeExpiry DateTime?
+  
   // Travel details
   destination     String?
   travelDate      DateTime?

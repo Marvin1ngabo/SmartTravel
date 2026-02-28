@@ -69,6 +69,20 @@ class ApiClient {
     });
   }
 
+  async verifyEmail(email: string, code: string) {
+    return this.request<{ user: any; message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  }
+
+  async resendVerificationCode(email: string) {
+    return this.request<{ message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async getProfile() {
     return this.request<any>('/auth/profile');
   }

@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/AdminEnhanced";
 import Onboarding from "./pages/Onboarding";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/compare" element={<InsuranceComparison />} />

@@ -54,11 +54,11 @@ export default function Auth() {
         
         toast({
           title: "Account created!",
-          description: "Let's complete your setup.",
+          description: "Please check your email for verification code.",
         });
         
-        // Always go to onboarding after registration
-        navigate("/onboarding");
+        // Redirect to email verification
+        navigate("/verify-email", { state: { email: form.email } });
       }
     } catch (error: any) {
       toast({

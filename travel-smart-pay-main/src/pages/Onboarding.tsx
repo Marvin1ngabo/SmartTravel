@@ -31,6 +31,17 @@ export default function Onboarding() {
   });
 
   useEffect(() => {
+    // Check if email is verified
+    if (user && !user.isEmailVerified) {
+      toast({
+        title: "Email not verified",
+        description: "Please verify your email before continuing",
+        variant: "destructive",
+      });
+      navigate("/verify-email", { state: { email: user.email }, replace: true });
+      return;
+    }
+    
     // Redirect to dashboard if already completed onboarding
     if (user?.hasCompletedOnboarding) {
       navigate("/dashboard", { replace: true });
