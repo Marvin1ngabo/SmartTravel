@@ -1,22 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "cd travel-smart-pay-main && npm install && npm run build",
-  "outputDirectory": "travel-smart-pay-main/dist",
-  "installCommand": "npm install --prefix travel-smart-pay-main && npm install --prefix backend",
   "builds": [
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/travel-smart-pay-main/dist/index.html"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ]
 }
