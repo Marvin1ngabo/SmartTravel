@@ -1,19 +1,65 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-
-const certData = {
-  name: "Alice Uwase",
-  destination: "Canada",
-  provider: "GlobalSafe Insurance",
-  coverage: "$250",
-  policyNumber: "VS-2026-0042891",
-  issueDate: "Mar 15, 2026",
-  expiryDate: "Apr 15, 2027",
-  status: "Active",
-};
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 export default function Certificate() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlanData();
+  }, [user]);
+
+  const loadPlanData = async () => {
+    if (!user?.selectedPlanId) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const plans = await api.getInsurancePlans();
+      const plan = plans.find((p: any) => p.id === user.selectedPlanId);
+      if (plan) {
+        setSelectedPlan(plan);
+      }
+    } catch (error) {
+      console.error('Failed to load plan:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user?.hasCompletedOnboarding || !selectedPlan) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">No Certificate Available</h2>
+          <p className="text-muted-foreground mb-4">Complete your onboarding to get your certificate</p>
+          <button onClick={() => navigate("/onboarding")} className="btn-maroon">
+            Start Onboarding
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const policyNumber = `VS-${new Date().getFullYear()}-${user.id.slice(0, 8).toUpperCase()}`;
+  const issueDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const travelDate = user.travelDate ? new Date(user.travelDate) : new Date();
+  const expiryDate = new Date(travelDate);
+  expiryDate.setDate(expiryDate.getDate() + selectedPlan.duration);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,13 +103,13 @@ export default function Certificate() {
           {/* Certificate Details */}
           <div className="space-y-4 mb-8">
             {[
-              { label: "Policyholder", value: certData.name },
-              { label: "Policy Number", value: certData.policyNumber },
-              { label: "Destination", value: certData.destination },
-              { label: "Insurance Provider", value: certData.provider },
-              { label: "Coverage Amount", value: certData.coverage },
-              { label: "Issue Date", value: certData.issueDate },
-              { label: "Expiry Date", value: certData.expiryDate },
+              { label: "Policyholder", value: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email },
+              { label: "Policy Number", value: policyNumber },
+              { label: "Destination", value: user.destination || "Rwanda" },
+              { label: "Insurance Provider", value: selectedPlan.name },
+              { label: "Coverage Amount", value: `$${selectedPlan.price}` },
+              { label: "Issue Date", value: issueDate },
+              { label: "Expiry Date", value: expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
             ].map(item => (
               <div key={item.label} className="flex justify-between items-center py-2 border-b border-border/50">
                 <span className="text-sm text-muted-foreground">{item.label}</span>
@@ -75,7 +121,7 @@ export default function Certificate() {
           {/* Status Badge */}
           <div className="text-center mb-6">
             <span className="px-4 py-2 rounded-full gradient-maroon text-primary-foreground font-semibold text-sm animate-pulse-glow inline-block">
-              ✓ {certData.status} – Verified
+              ✓ Active – Verified
             </span>
           </div>
 
@@ -106,7 +152,7 @@ export default function Certificate() {
         {/* Trust notice */}
         <div className="text-center mt-6">
           <p className="text-xs text-muted-foreground">
-            🔒 This certificate is digitally signed and tamper-proof. Verification ID: {certData.policyNumber}
+            🔒 This certificate is digitally signed and tamper-proof. Verification ID: {policyNumber}
           </p>
         </div>
       </div>

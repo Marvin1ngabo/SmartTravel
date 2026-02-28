@@ -5,22 +5,26 @@ import { prisma } from '../lib/prisma.js';
 const createPaymentSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().length(3).default('USD'),
-  userId: z.string().uuid(),
+  method: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
 
 export const createPayment = async (req: Request, res: Response) => {
   try {
+    const userId = (req as any).user.id;
     const data = createPaymentSchema.parse(req.body);
     
-    // TODO: Integrate with payment provider (Stripe)
+    // Create payment record
     const payment = await prisma.payment.create({
       data: {
         amount: data.amount,
         currency: data.currency,
-        userId: data.userId,
-        status: 'pending',
-        metadata: data.metadata,
+        userId: userId,
+        status: 'completed', // Mark as completed for now (TODO: integrate Stripe)
+        metadata: {
+          ...data.metadata,
+          method: data.method || 'Online Payment',
+        },
       },
       include: {
         user: {
@@ -71,6 +75,68 @@ export const getPaymentStatus = async (req: Request, res: Response) => {
     res.json(payment);
   } catch (error) {
     console.error('Get payment error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getUserPayments = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    
+    const payments = await prisma.payment.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        metadata: true,
+        createdAt: true,
+      },
+    });
+
+    // Calculate total paid
+    const totalPaid = payments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    res.json({
+      payments,
+      totalPaid,
+    });
+  } catch (error) {
+    console.error('Get user payments error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getAllPayments = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    
+    if (user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const payments = await prisma.payment.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    res.json(payments);
+  } catch (error) {
+    console.error('Get all payments error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

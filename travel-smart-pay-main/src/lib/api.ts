@@ -92,6 +92,8 @@ class ApiClient {
       throw error;
     }
   }
+
+  // Insurance endpoints
   async getInsurancePlans() {
     return this.request<any[]>('/insurance/options');
   }
@@ -109,11 +111,43 @@ class ApiClient {
     });
   }
 
+  async createInsurancePlan(data: {
+    name: string;
+    description?: string;
+    price: number;
+    coverage: string[];
+    duration: number;
+  }) {
+    return this.request<any>('/insurance/plans', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateInsurancePlan(id: string, data: Partial<{
+    name: string;
+    description: string;
+    price: number;
+    coverage: string[];
+    duration: number;
+  }>) {
+    return this.request<any>(`/insurance/plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteInsurancePlan(id: string) {
+    return this.request<any>(`/insurance/plans/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Payment endpoints
   async createPayment(data: {
     amount: number;
-    currency: string;
-    userId: string;
+    currency?: string;
+    method?: string;
   }) {
     return this.request<any>('/payments', {
       method: 'POST',
@@ -125,18 +159,17 @@ class ApiClient {
     return this.request<any>(`/payments/${paymentId}`);
   }
 
-  // User endpoints
-  async updateOnboarding(data: {
-    destination: string;
-    travelDate: string;
-    purpose: string;
-    selectedPlanId: string;
-    paymentPlan: string;
-  }) {
-    return this.request<any>('/user/onboarding', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+  async getUserPayments() {
+    return this.request<{ payments: any[]; totalPaid: number }>('/payments/user/history');
+  }
+
+  async getAllPayments() {
+    return this.request<any[]>('/payments/admin/all');
+  }
+
+  // Admin endpoints
+  async getAllUsers() {
+    return this.request<any[]>('/insurance/admin/users');
   }
 }
 

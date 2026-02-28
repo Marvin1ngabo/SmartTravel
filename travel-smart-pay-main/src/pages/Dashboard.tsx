@@ -40,15 +40,18 @@ export default function Dashboard() {
   
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
-  const [user, setUser] = useState(mockUser);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [totalPaid, setTotalPaid] = useState(0);
   const [contributionAmount, setContributionAmount] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     if (authUser?.selectedPlanId) {
       loadSelectedPlan();
+      loadPaymentHistory();
     } else {
       setIsLoadingPlan(false);
     }
@@ -72,6 +75,16 @@ export default function Dashboard() {
     }
   };
 
+  const loadPaymentHistory = async () => {
+    try {
+      const data = await api.getUserPayments();
+      setPayments(data.payments);
+      setTotalPaid(data.totalPaid);
+    } catch (error: any) {
+      console.error('Failed to load payment history:', error);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     toast({
@@ -81,28 +94,47 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  const balance = user.requiredAmount - user.paidAmount;
-  const progress = Math.round((user.paidAmount / user.requiredAmount) * 100);
-  const risk = riskLevels[user.destination] || { level: "Medium", color: "bg-yellow-100 text-yellow-800", minInsurance: "$200", compliance: "Pending" };
+  const requiredAmount = selectedPlan?.price || 250;
+  const balance = requiredAmount - totalPaid;
+  const progress = Math.round((totalPaid / requiredAmount) * 100);
+  const destination = authUser?.destination || "Rwanda";
+  const risk = riskLevels[destination] || { level: "Medium", color: "bg-yellow-100 text-yellow-800", minInsurance: "$200", compliance: "Pending" };
 
-  const travelDate = new Date(user.travelDate);
+  const travelDate = authUser?.travelDate ? new Date(authUser.travelDate) : new Date(mockUser.travelDate);
   const today = new Date();
   const daysLeft = Math.max(0, Math.ceil((travelDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
   const weeksLeft = Math.max(1, Math.floor(daysLeft / 7));
   const weeklyAmount = Math.ceil(balance / weeksLeft);
 
-  const handleContribute = (amount: number) => {
-    if (amount <= 0 || amount > balance) return;
-    setUser(prev => ({
-      ...prev,
-      paidAmount: Math.min(prev.paidAmount + amount, prev.requiredAmount),
-      contributions: [
-        { date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), amount, method: "Online Payment", status: "Successful" },
-        ...prev.contributions,
-      ],
-    }));
-    setContributionAmount("");
+  const handleContribute = async (amount: number) => {
+    if (amount <= 0 || amount > balance || isProcessingPayment) return;
+    
+    setIsProcessingPayment(true);
+    try {
+      await api.createPayment({
+        amount,
+        currency: 'USD',
+        method: 'Online Payment',
+      });
+
+      toast({
+        title: "Payment successful!",
+        description: `$${amount} has been added to your account.`,
+      });
+
+      // Reload payment history
+      await loadPaymentHistory();
+      setContributionAmount("");
+    } catch (error: any) {
+      toast({
+        title: "Payment failed",
+        description: error.message || "Failed to process payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const milestoneMessage = progress >= 100 ? "🎉 Fully Insured!" : progress >= 75 ? "🔥 Almost there! 75%+ paid" : progress >= 50 ? "💪 Halfway there!" : null;
@@ -188,11 +220,11 @@ export default function Dashboard() {
             <h3 className="font-serif text-xl font-bold text-foreground mb-6">Travel Overview</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
               {[
-                { label: "Destination", value: authUser?.destination || user.destination },
-                { label: "Travel Date", value: authUser?.travelDate ? new Date(authUser.travelDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date(user.travelDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
-                { label: "Provider", value: selectedPlan?.name || user.provider },
-                { label: "Required", value: `$${selectedPlan?.price || user.requiredAmount}` },
-                { label: "Paid", value: `$${user.paidAmount}`, highlight: true },
+                { label: "Destination", value: authUser?.destination || destination },
+                { label: "Travel Date", value: travelDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
+                { label: "Provider", value: selectedPlan?.name || "Not selected" },
+                { label: "Required", value: `$${requiredAmount}` },
+                { label: "Paid", value: `$${totalPaid}`, highlight: true },
                 { label: "Remaining", value: `$${balance}` },
               ].map(item => (
                 <div key={item.label}>
@@ -255,7 +287,12 @@ export default function Dashboard() {
         </div>
 
         {/* Payment Timeline */}
-        <PaymentTimeline progress={progress} contributions={user.contributions} />
+        <PaymentTimeline progress={progress} contributions={payments.map(p => ({
+          date: new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          amount: p.amount,
+          method: p.metadata?.method || 'Online Payment',
+          status: p.status === 'completed' ? 'Successful' : 'Pending',
+        }))} />
 
         {/* Payment Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -280,10 +317,10 @@ export default function Dashboard() {
               />
               <button
                 onClick={() => handleContribute(Number(contributionAmount))}
-                disabled={!contributionAmount || Number(contributionAmount) <= 0 || Number(contributionAmount) > balance}
+                disabled={!contributionAmount || Number(contributionAmount) <= 0 || Number(contributionAmount) > balance || isProcessingPayment}
                 className="btn-maroon disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add
+                {isProcessingPayment ? "Processing..." : "Add"}
               </button>
             </div>
           </div>
@@ -294,10 +331,10 @@ export default function Dashboard() {
             <p className="font-serif text-4xl font-bold text-primary mb-6">${balance}</p>
             <button
               onClick={() => handleContribute(balance)}
-              disabled={balance <= 0}
+              disabled={balance <= 0 || isProcessingPayment}
               className="btn-maroon w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {balance <= 0 ? "Fully Paid ✓" : "Pay Now"}
+              {isProcessingPayment ? "Processing..." : balance <= 0 ? "Fully Paid ✓" : "Pay Now"}
             </button>
           </div>
         </div>
@@ -353,12 +390,12 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {user.contributions.map((c, i) => (
+                    {payments.map((p, i) => (
                       <tr key={i} className="border-b border-border/50 last:border-0">
-                        <td className="p-4 text-sm text-foreground">{c.date}</td>
-                        <td className="p-4 text-sm font-semibold text-primary">${c.amount}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{c.method}</td>
-                        <td className="p-4"><span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">{c.status}</span></td>
+                        <td className="p-4 text-sm text-foreground">{new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                        <td className="p-4 text-sm font-semibold text-primary">${p.amount}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{p.metadata?.method || 'Online Payment'}</td>
+                        <td className="p-4"><span className={`text-xs px-2 py-1 rounded-full ${p.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status === 'completed' ? 'Successful' : 'Pending'}</span></td>
                       </tr>
                     ))}
                   </tbody>

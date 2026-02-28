@@ -1,64 +1,117 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const mockUsers = [
-  { id: 1, name: "Alice Uwase", destination: "Canada", required: 250, paid: 120, status: "Saving", provider: "GlobalSafe Insurance", date: "2026-04-15" },
-  { id: 2, name: "Jean Habimana", destination: "France", required: 300, paid: 300, status: "Fully Paid", provider: "SecureJourney International", date: "2026-03-20" },
-  { id: 3, name: "Grace Mukiza", destination: "United Kingdom", required: 280, paid: 50, status: "Saving", provider: "AfroShield Travel Cover", date: "2026-05-01" },
-  { id: 4, name: "Eric Niyonzima", destination: "United States", required: 350, paid: 350, status: "Fully Paid", provider: "GlobalSafe Insurance", date: "2026-06-10" },
-  { id: 5, name: "Diane Uwimana", destination: "Germany", required: 220, paid: 0, status: "Not Started", provider: "TrustGuard Africa", date: "2026-07-15" },
-  { id: 6, name: "Patrick Mugabo", destination: "Japan", required: 400, paid: 200, status: "Saving", provider: "SecureJourney International", date: "2026-04-28" },
-  { id: 7, name: "Marie Claire", destination: "Australia", required: 350, paid: 350, status: "Fully Paid", provider: "GlobalSafe Insurance", date: "2026-03-30" },
-  { id: 8, name: "David Nsabimana", destination: "Nigeria", required: 200, paid: 80, status: "Saving", provider: "AfroShield Travel Cover", date: "2026-05-20" },
-];
-
-const paymentLogs = [
-  { date: "Feb 27, 2026", user: "Alice Uwase", amount: 50, method: "Bank Transfer", status: "Successful" },
-  { date: "Feb 26, 2026", user: "David Nsabimana", amount: 30, method: "Mobile Money", status: "Successful" },
-  { date: "Feb 25, 2026", user: "Grace Mukiza", amount: 25, method: "Visa Card", status: "Successful" },
-  { date: "Feb 24, 2026", user: "Patrick Mugabo", amount: 100, method: "Bank Transfer", status: "Successful" },
-  { date: "Feb 23, 2026", user: "Alice Uwase", amount: 20, method: "Mobile Money", status: "Successful" },
-];
+import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Admin() {
   const navigate = useNavigate();
-  const [filterDest, setFilterDest] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterProvider, setFilterProvider] = useState("");
-  const [activeTab, setActiveTab] = useState<"users" | "payments" | "revenue">("users");
-  const [editingUser, setEditingUser] = useState<number | null>(null);
-  const [users, setUsers] = useState(mockUsers);
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"users" | "payments" | "revenue" | "plans">("users");
+  const [users, setUsers] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [newPlan, setNewPlan] = useState({
+    name: "",
+    description: "",
+    price: 0,
+    duration: 30,
+    coverage: [""],
+  });
 
-  const destinations = [...new Set(users.map(u => u.destination))];
-  const providersList = [...new Set(users.map(u => u.provider))];
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const filtered = users.filter(u =>
-    (!filterDest || u.destination === filterDest) &&
-    (!filterStatus || u.status === filterStatus) &&
-    (!filterProvider || u.provider === filterProvider)
-  );
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [usersData, paymentsData, plansData] = await Promise.all([
+        api.getAllUsers(),
+        api.getAllPayments(),
+        api.getInsurancePlans(),
+      ]);
+      setUsers(usersData);
+      setPayments(paymentsData);
+      setInsurancePlans(plansData);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const totalRevenue = users.reduce((s, u) => s + u.paid, 0);
-  const totalRequired = users.reduce((s, u) => s + u.required, 0);
+  const handleAddPlan = async () => {
+    try {
+      const coverage = newPlan.coverage.filter(c => c.trim() !== "");
+      await api.createInsurancePlan({
+        ...newPlan,
+        coverage,
+      });
+      toast({
+        title: "Success",
+        description: "Insurance plan created successfully",
+      });
+      setShowAddPlanModal(false);
+      setNewPlan({ name: "", description: "", price: 0, duration: 30, coverage: [""] });
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create plan",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdatePlan = async (id: string, data: any) => {
+    try {
+      await api.updateInsurancePlan(id, data);
+      toast({
+        title: "Success",
+        description: "Insurance plan updated successfully",
+      });
+      setEditingPlan(null);
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update plan",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePlan = async (id: string) => {
+    if (!confirm("Are you sure you want to deactivate this plan?")) return;
+    
+    try {
+      await api.deleteInsurancePlan(id);
+      toast({
+        title: "Success",
+        description: "Insurance plan deactivated",
+      });
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete plan",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const totalRevenue = users.reduce((s, u) => s + (u.totalPaid || 0), 0);
+  const totalRequired = users.reduce((s, u) => s + (u.selectedPlan?.price || 0), 0);
   const commission = Math.round(totalRevenue * 0.05);
-  const fullyPaid = users.filter(u => u.status === "Fully Paid").length;
-  const pending = users.filter(u => u.status !== "Fully Paid").length;
-
-  const handleDeleteUser = (id: number) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
-  };
-
-  const handleExportCSV = () => {
-    const header = "Name,Destination,Required,Paid,Status,Provider\n";
-    const rows = filtered.map(u => `${u.name},${u.destination},$${u.required},$${u.paid},${u.status},${u.provider}`).join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "voyageshield-travelers.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const fullyPaid = users.filter(u => u.totalPaid >= (u.selectedPlan?.price || 0)).length;
+  const pending = users.length - fullyPaid;
 
   const stats = [
     { label: "Total Travelers", value: users.length.toString(), icon: "✈️" },
@@ -66,8 +119,16 @@ export default function Admin() {
     { label: "Fully Paid", value: fullyPaid.toString(), icon: "✅" },
     { label: "Pending", value: pending.toString(), icon: "⏳" },
     { label: "Commission (5%)", value: `$${commission.toLocaleString()}`, icon: "💎" },
-    { label: "Completion Rate", value: `${Math.round((fullyPaid / users.length) * 100)}%`, icon: "📊" },
+    { label: "Completion Rate", value: users.length > 0 ? `${Math.round((fullyPaid / users.length) * 100)}%` : "0%", icon: "📊" },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,7 +161,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <div className="flex gap-2 flex-wrap">
-          {(["users", "payments", "revenue"] as const).map(tab => (
+          {(["users", "payments", "revenue", "plans"] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -108,7 +169,7 @@ export default function Admin() {
                 activeTab === tab ? "gradient-maroon text-primary-foreground" : "glass-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab === "users" ? "👥 Travelers" : tab === "payments" ? "💳 Payment Logs" : "📈 Revenue"}
+              {tab === "users" ? "👥 Travelers" : tab === "payments" ? "💳 Payment Logs" : tab === "revenue" ? "📈 Revenue" : "🏢 Insurance Plans"}
             </button>
           ))}
         </div>
@@ -116,48 +177,31 @@ export default function Admin() {
         {/* Users Tab */}
         {activeTab === "users" && (
           <div className="space-y-4 animate-fade-in">
-            {/* Filters */}
-            <div className="glass-card p-4 flex flex-wrap gap-3 items-center">
-              <select value={filterDest} onChange={e => setFilterDest(e.target.value)} className="input-field w-auto text-sm py-2">
-                <option value="">All Destinations</option>
-                {destinations.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field w-auto text-sm py-2">
-                <option value="">All Statuses</option>
-                <option value="Fully Paid">Fully Paid</option>
-                <option value="Saving">Saving</option>
-                <option value="Not Started">Not Started</option>
-              </select>
-              <select value={filterProvider} onChange={e => setFilterProvider(e.target.value)} className="input-field w-auto text-sm py-2">
-                <option value="">All Providers</option>
-                {providersList.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <button onClick={handleExportCSV} className="btn-outline-maroon py-2 px-4 text-sm ml-auto">
-                📥 Export CSV
-              </button>
-            </div>
-
-            {/* Table */}
             <div className="glass-card-elevated overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      {["Name", "Destination", "Provider", "Required", "Paid", "Progress", "Status", "Actions"].map(h => (
+                      {["Name", "Email", "Destination", "Provider", "Required", "Paid", "Progress", "Status"].map(h => (
                         <th key={h} className="text-left p-3 text-xs text-muted-foreground uppercase tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map(u => {
-                      const pct = Math.round((u.paid / u.required) * 100);
+                    {users.map(u => {
+                      const required = u.selectedPlan?.price || 0;
+                      const paid = u.totalPaid || 0;
+                      const pct = required > 0 ? Math.round((paid / required) * 100) : 0;
+                      const status = pct >= 100 ? "Fully Paid" : pct > 0 ? "Saving" : "Not Started";
+                      
                       return (
                         <tr key={u.id} className="border-b border-border/50 last:border-0">
-                          <td className="p-3 text-sm font-semibold text-foreground">{u.name}</td>
-                          <td className="p-3 text-sm text-muted-foreground">{u.destination}</td>
-                          <td className="p-3 text-xs text-muted-foreground">{u.provider}</td>
-                          <td className="p-3 text-sm text-foreground">${u.required}</td>
-                          <td className="p-3 text-sm font-semibold text-primary">${u.paid}</td>
+                          <td className="p-3 text-sm font-semibold text-foreground">{u.firstName} {u.lastName}</td>
+                          <td className="p-3 text-xs text-muted-foreground">{u.email}</td>
+                          <td className="p-3 text-sm text-muted-foreground">{u.destination || 'N/A'}</td>
+                          <td className="p-3 text-xs text-muted-foreground">{u.selectedPlan?.name || 'N/A'}</td>
+                          <td className="p-3 text-sm text-foreground">${required}</td>
+                          <td className="p-3 text-sm font-semibold text-primary">${paid}</td>
                           <td className="p-3">
                             <div className="w-16 h-2 rounded-full bg-secondary overflow-hidden">
                               <div className="h-full gradient-maroon rounded-full" style={{ width: `${pct}%` }} />
@@ -165,20 +209,10 @@ export default function Admin() {
                           </td>
                           <td className="p-3">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              u.status === "Fully Paid" ? "bg-green-100 text-green-800" :
-                              u.status === "Saving" ? "bg-yellow-100 text-yellow-800" :
+                              status === "Fully Paid" ? "bg-green-100 text-green-800" :
+                              status === "Saving" ? "bg-yellow-100 text-yellow-800" :
                               "bg-secondary text-muted-foreground"
-                            }`}>{u.status}</span>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex gap-1">
-                              <button onClick={() => setEditingUser(editingUser === u.id ? null : u.id)} className="text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors">
-                                ✏️
-                              </button>
-                              <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-destructive transition-colors">
-                                🗑️
-                              </button>
-                            </div>
+                            }`}>{status}</span>
                           </td>
                         </tr>
                       );
@@ -187,7 +221,7 @@ export default function Admin() {
                 </table>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground text-right">{filtered.length} of {users.length} travelers shown</p>
+            <p className="text-xs text-muted-foreground text-right">{users.length} travelers</p>
           </div>
         )}
 
@@ -207,13 +241,13 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paymentLogs.map((l, i) => (
+                  {payments.map((p, i) => (
                     <tr key={i} className="border-b border-border/50 last:border-0">
-                      <td className="p-4 text-sm text-foreground">{l.date}</td>
-                      <td className="p-4 text-sm font-semibold text-foreground">{l.user}</td>
-                      <td className="p-4 text-sm font-semibold text-primary">${l.amount}</td>
-                      <td className="p-4 text-sm text-muted-foreground">{l.method}</td>
-                      <td className="p-4"><span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">{l.status}</span></td>
+                      <td className="p-4 text-sm text-foreground">{new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                      <td className="p-4 text-sm font-semibold text-foreground">{p.user?.firstName} {p.user?.lastName}</td>
+                      <td className="p-4 text-sm font-semibold text-primary">${p.amount}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{p.metadata?.method || 'Online Payment'}</td>
+                      <td className="p-4"><span className={`text-xs px-2 py-1 rounded-full ${p.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -237,15 +271,152 @@ export default function Admin() {
             <div className="glass-card-elevated p-6">
               <h3 className="font-serif text-lg font-bold text-foreground mb-4">Provider Revenue</h3>
               <div className="space-y-3">
-                {providersList.map(p => {
-                  const provRevenue = users.filter(u => u.provider === p).reduce((s, u) => s + u.paid, 0);
+                {insurancePlans.map(plan => {
+                  const planRevenue = users
+                    .filter(u => u.selectedPlanId === plan.id)
+                    .reduce((s, u) => s + (u.totalPaid || 0), 0);
                   return (
-                    <div key={p} className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground truncate mr-2">{p}</span>
-                      <span className="font-semibold text-foreground">${provRevenue}</span>
+                    <div key={plan.id} className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground truncate mr-2">{plan.name}</span>
+                      <span className="font-semibold text-foreground">${planRevenue}</span>
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Insurance Plans Tab */}
+        {activeTab === "plans" && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="flex justify-between items-center">
+              <h3 className="font-serif text-xl font-bold text-foreground">Insurance Plans</h3>
+              <button onClick={() => setShowAddPlanModal(true)} className="btn-maroon py-2 px-4 text-sm">
+                + Add New Plan
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {insurancePlans.map(plan => (
+                <div key={plan.id} className="glass-card-elevated p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-lg">
+                      {plan.name.charAt(0)}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingPlan(plan)} className="text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground">
+                        ✏️
+                      </button>
+                      <button onClick={() => handleDeletePlan(plan.id)} className="text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-destructive">
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                  <h4 className="font-serif text-lg font-bold text-foreground mb-2">{plan.name}</h4>
+                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-xs text-muted-foreground">Price</span>
+                      <span className="text-sm font-bold text-primary">${plan.price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs text-muted-foreground">Duration</span>
+                      <span className="text-sm font-semibold text-foreground">{plan.duration} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs text-muted-foreground">Status</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${plan.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {plan.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add Plan Modal */}
+        {showAddPlanModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="glass-card-elevated p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="font-serif text-xl font-bold text-foreground mb-4">Add New Insurance Plan</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Plan Name</label>
+                  <input
+                    type="text"
+                    value={newPlan.name}
+                    onChange={e => setNewPlan({ ...newPlan, name: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="e.g., Premium Travel Insurance"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Description</label>
+                  <textarea
+                    value={newPlan.description}
+                    onChange={e => setNewPlan({ ...newPlan, description: e.target.value })}
+                    className="input-field w-full"
+                    rows={3}
+                    placeholder="Brief description of the plan"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Price (USD)</label>
+                  <input
+                    type="number"
+                    value={newPlan.price}
+                    onChange={e => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
+                    className="input-field w-full"
+                    placeholder="250"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Duration (days)</label>
+                  <input
+                    type="number"
+                    value={newPlan.duration}
+                    onChange={e => setNewPlan({ ...newPlan, duration: Number(e.target.value) })}
+                    className="input-field w-full"
+                    placeholder="30"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Coverage Items</label>
+                  {newPlan.coverage.map((item, i) => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={e => {
+                          const updated = [...newPlan.coverage];
+                          updated[i] = e.target.value;
+                          setNewPlan({ ...newPlan, coverage: updated });
+                        }}
+                        className="input-field flex-1"
+                        placeholder="e.g., Medical expenses up to $100k"
+                      />
+                      {i === newPlan.coverage.length - 1 && (
+                        <button
+                          onClick={() => setNewPlan({ ...newPlan, coverage: [...newPlan.coverage, ""] })}
+                          className="btn-outline-maroon py-2 px-3 text-sm"
+                        >
+                          +
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowAddPlanModal(false)} className="btn-outline-maroon flex-1 py-2">
+                  Cancel
+                </button>
+                <button onClick={handleAddPlan} className="btn-maroon flex-1 py-2">
+                  Create Plan
+                </button>
               </div>
             </div>
           </div>
