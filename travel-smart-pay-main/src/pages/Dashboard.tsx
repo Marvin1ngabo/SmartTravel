@@ -38,31 +38,37 @@ export default function Dashboard() {
   console.log('Dashboard - authUser.role:', authUser?.role);
   console.log('Dashboard - is admin?', authUser?.role === 'admin');
   
-  const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
-  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const [user, setUser] = useState(mockUser);
-  const [selectedProvider, setSelectedProvider] = useState(mockUser.provider);
   const [contributionAmount, setContributionAmount] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showNotifications, setShowNotifications] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
-    loadInsurancePlans();
-  }, []);
+    if (authUser?.selectedPlanId) {
+      loadSelectedPlan();
+    } else {
+      setIsLoadingPlan(false);
+    }
+  }, [authUser]);
 
-  const loadInsurancePlans = async () => {
+  const loadSelectedPlan = async () => {
     try {
       const plans = await api.getInsurancePlans();
-      setInsurancePlans(plans);
+      const plan = plans.find((p: any) => p.id === authUser?.selectedPlanId);
+      if (plan) {
+        setSelectedPlan(plan);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to load insurance plans",
+        description: "Failed to load insurance plan",
         variant: "destructive",
       });
     } finally {
-      setIsLoadingPlans(false);
+      setIsLoadingPlan(false);
     }
   };
 
@@ -182,10 +188,10 @@ export default function Dashboard() {
             <h3 className="font-serif text-xl font-bold text-foreground mb-6">Travel Overview</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
               {[
-                { label: "Destination", value: user.destination },
-                { label: "Travel Date", value: new Date(user.travelDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
-                { label: "Provider", value: selectedProvider },
-                { label: "Required", value: `$${user.requiredAmount}` },
+                { label: "Destination", value: authUser?.destination || user.destination },
+                { label: "Travel Date", value: authUser?.travelDate ? new Date(authUser.travelDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : new Date(user.travelDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) },
+                { label: "Provider", value: selectedPlan?.name || user.provider },
+                { label: "Required", value: `$${selectedPlan?.price || user.requiredAmount}` },
                 { label: "Paid", value: `$${user.paidAmount}`, highlight: true },
                 { label: "Remaining", value: `$${balance}` },
               ].map(item => (
@@ -296,43 +302,37 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Provider Selection */}
-        <div className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-serif text-xl font-bold text-foreground">Insurance Providers</h3>
-            <button onClick={() => navigate("/compare")} className="text-sm text-primary font-semibold hover:underline">
-              Compare All →
-            </button>
-          </div>
-          {isLoadingPlans ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="text-sm text-muted-foreground mt-2">Loading insurance plans...</p>
-            </div>
-          ) : insurancePlans.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {insurancePlans.map(plan => (
-                <div
-                  key={plan.id}
-                  onClick={() => setSelectedProvider(plan.name)}
-                  className={`provider-card ${selectedProvider === plan.name ? "selected" : ""}`}
-                >
-                  <div className="w-10 h-10 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-sm mb-3">
-                    {plan.name.charAt(0)}
-                  </div>
-                  <h4 className="font-semibold text-foreground text-sm">{plan.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
-                  <p className="font-bold text-primary text-sm mt-3">${plan.price}</p>
-                  <p className="text-xs text-muted-foreground">{plan.duration} days coverage</p>
+        {/* Selected Insurance Plan */}
+        {selectedPlan && (
+          <div className="animate-fade-in">
+            <h3 className="font-serif text-xl font-bold text-foreground mb-4">Your Insurance Plan</h3>
+            <div className="glass-card-elevated p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-xl gradient-maroon flex items-center justify-center text-primary-foreground font-bold text-xl flex-shrink-0">
+                  {selectedPlan.name.charAt(0)}
                 </div>
-              ))}
+                <div className="flex-1">
+                  <h4 className="font-serif text-xl font-bold text-foreground">{selectedPlan.name}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedPlan.description}</p>
+                  <div className="flex gap-6 mt-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Coverage</p>
+                      <p className="font-semibold text-foreground mt-1">{selectedPlan.duration} days</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Cost</p>
+                      <p className="font-semibold text-primary mt-1">${selectedPlan.price}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Purpose</p>
+                      <p className="font-semibold text-foreground mt-1 capitalize">{authUser?.purpose || 'Tourism'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="glass-card-elevated p-8 text-center">
-              <p className="text-muted-foreground">No insurance plans available</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Contribution History */}
         <div className="animate-fade-in">
